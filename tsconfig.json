@@ -9,6 +9,10 @@
     }
   ],
   "compilerOptions": {
+    "lib": [
+      "es2022",
+      "dom"
+    ],
     "baseUrl": ".",
     "types": [
       "vite/client"
