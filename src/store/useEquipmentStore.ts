@@ -13,11 +13,10 @@ interface Equipment {
 }
 
 export const useEquipmentStore = defineStore("equipment", {
-  // Lista de equipamentos
-  // Histórico de posições por equipamento (chave = equipmentId)
   state: () => ({
     equipments: [] as Equipment[],
     positionHistory: {} as Record<string, Position[]>,
+    selectedEquipmentId: null as string | null, // ID do equipamento atualmente selecionado
   }),
 
   actions: {
@@ -42,6 +41,10 @@ export const useEquipmentStore = defineStore("equipment", {
       const positions = this.positionHistory[equipmentId];
       if (!positions || positions.length === 0) return null;
       return positions.slice(-1)[0];
+    },
+
+    setSelectedEquipment(id: string | null) {
+      this.selectedEquipmentId = id;
     },
   },
 });

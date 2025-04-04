@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { onMounted } from "vue"
-import { useEquipmentStore } from "@/store/useEquipmentStore"
-import EquipmentMap from "@/components/map/EquipmentMap.vue"
-
-// Acessa a store com os dados
+import EquipmentMap from '@/components/map/EquipmentMap.vue'
+import { useEquipmentStore } from '@/store/useEquipmentStore'
+import { onMounted } from 'vue'
+import { Button } from '@/components/ui/button'
 const store = useEquipmentStore()
 
-// Carrega os dados ao montar a página
 onMounted(() => {
   store.loadEquipments()
   store.loadPositionHistory()
@@ -14,19 +12,27 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4">
+  <div class="p-6">
     <h1 class="text-2xl font-bold mb-4">Equipamentos</h1>
 
-    <!-- Mapa (ainda vazio, mas em breve terá os marcadores) -->
-    <EquipmentMap />
+    <div class="grid grid-cols-2 gap-6 min-h-[500px]">
+      <!-- Mapa -->
+      <div>
+        <EquipmentMap />
 
-    <div class="mt-6">
-      <h2 class="text-xl font-semibold mb-2">Lista de Equipamentos</h2>
-      <ul class="list-disc list-inside">
-        <li v-for="equip in store.equipments" :key="equip.id">
-          {{ equip.name }}
-        </li>
-      </ul>
+      </div>
+
+      <!-- Lista de equipamentos -->
+      <div class="bg-white shadow rounded-xl p-4 space-y-2 overflow-y-auto max-h-[500px]">
+        <h2 class="text-xl font-semibold mb-2">Lista</h2>
+        <ul>
+          <li v-for="equip in store.equipments" :key="equip.id"
+            class="border p-2 rounded hover:bg-gray-100 cursor-pointer">
+            {{ equip.name }}
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
+
 </template>

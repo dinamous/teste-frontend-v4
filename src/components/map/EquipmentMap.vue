@@ -23,17 +23,12 @@ function getLatLng(equipmentId: string): LatLngExpression {
 </script>
 
 <template>
-  <LMap style="height: 500px" :zoom="5" :center="[ -14.2350, -51.9253 ]" :use-global-leaflet="false">
-    <LTileLayer
-      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      attribution="&copy; OpenStreetMap contributors"
-    />
+  <LMap style="height: 500px" class="w-full rounded-xl shadow" :zoom="5" :center="[ -14.2350, -51.9253 ]"
+    :use-global-leaflet="false">
+    <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      attribution="&copy; OpenStreetMap contributors" />
 
     <!-- Itera sobre cada equipamento e adiciona um marcador com sua posição atual -->
-    <LMarker
-      v-for="equip in store.equipments"
-      :key="equip.id"
-      :lat-lng="getLatLng(equip.id)"
-    />
+    <LMarker v-for="equip in store.equipments" :key="equip.id" :lat-lng="getLatLng(equip.id)" />
   </LMap>
 </template>
