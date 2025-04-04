@@ -7,6 +7,7 @@ import {
   LCircleMarker,
 } from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
+import AntPath from "@/components/map/AntPath.vue"; // novo componente
 
 import { useEquipmentStore } from "@/store/useEquipmentStore";
 import { ref, onMounted, computed } from "vue";
@@ -14,6 +15,8 @@ import type { LatLngExpression } from "leaflet";
 
 const store = useEquipmentStore();
 const selectedEquipmentId = ref<string | null>(null);
+
+const mapRef = ref<any>(null); // cria o ref pro mapa
 
 // Carrega os dados ao montar o componente
 onMounted(() => {
@@ -31,12 +34,12 @@ function getLatLng(equipmentId: string): LatLngExpression {
 const trajectory = computed(() => {
   if (!selectedEquipmentId.value) return [];
   const positions = store.positionHistory[selectedEquipmentId.value] || [];
-  return positions.map((p) => [p.lat, p.lon]) as LatLngExpression[];
+  return positions.map((p) => [p.lat, p.lon]) as [number, number][];
 });
 </script>
 
 <template>
-  <LMap style="height: 500px" :zoom="5" :center="[-14.235, -51.9253]" :use-global-leaflet="false"
+  <LMap ref="mapRef" style="height: 500px" :zoom="5" :center="[-14.235, -51.9253]" :use-global-leaflet="false"
     class="rounded-xl shadow">
     <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       attribution="&copy; OpenStreetMap contributors" />
@@ -50,7 +53,7 @@ const trajectory = computed(() => {
       fill-color="green" :fill-opacity="0.8" />
 
     <!-- Trajetória do equipamento selecionado -->
-    <LPolyline v-if="selectedEquipmentId && trajectory.length" :lat-lngs="trajectory" :weight="4" :color="'blue'"
-      :opacity="0.7" />
+    <AntPath v-if="selectedEquipmentId && trajectory.length" :lat-lngs="trajectory"
+      :map-object="mapRef?.leafletObject" />
   </LMap>
 </template>
