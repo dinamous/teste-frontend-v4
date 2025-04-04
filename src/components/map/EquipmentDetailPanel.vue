@@ -4,34 +4,38 @@ import { useEquipmentStore } from "@/store/useEquipmentStore";
 
 const store = useEquipmentStore();
 
-// Computa o equipamento selecionado com base no ID
-const selectedEquipment = computed(() =>
-  store.equipments.find((e) => e.id === store.selectedEquipmentId)
-);
+const selectedEquipment = computed(() => {
+  return store.equipments.find(e => e.id === store.selectedEquipmentId) || null;
+});
 
-// Computa a última posição do equipamento
+const modelName = computed(() => {
+  return selectedEquipment.value
+    ? store.getEquipmentModelName(selectedEquipment.value)
+    : "";
+});
+
+const lastUpdate = computed(() => {
+  return selectedEquipment.value
+    ? store.getFormattedLastPosition(selectedEquipment.value.id)
+    : "";
+});
+
 const lastPosition = computed(() =>
-  store.selectedEquipmentId ? store.getLastPosition(store.selectedEquipmentId) : null
+  selectedEquipment.value
+    ? store.getLastPosition(selectedEquipment.value.id)
+    : null
 );
 </script>
 
 <template>
-  <div class="p-4 bg-white shadow-md rounded-xl h-[500px] overflow-y-auto">
-    <h2 class="text-xl font-semibold mb-2">Detalhes do Equipamento</h2>
-
-    <div v-if="selectedEquipment">
-      <p><strong>ID:</strong> {{ selectedEquipment.id }}</p>
-      <p><strong>Nome:</strong> {{ selectedEquipment.name }}</p>
-      <p><strong>Modelo:</strong> {{ selectedEquipment.equipmentModelId }}</p>
-
-      <div v-if="lastPosition" class="mt-2">
-        <p><strong>Última posição:</strong></p>
-        <p>Lat: {{ lastPosition.lat }}</p>
-        <p>Lon: {{ lastPosition.lon }}</p>
-        <p>Data: {{ lastPosition.date }}</p>
-      </div>
-    </div>
-
-    <p v-else class="text-gray-500">Selecione um marcador no mapa.</p>
+  <div v-if="selectedEquipment" class="p-4 border rounded-xl shadow bg-white space-y-2">
+    <h2 class="text-lg font-semibold">{{ selectedEquipment.name }}</h2>
+    <p class="text-sm text-gray-600">Modelo: <strong>{{ modelName }}</strong></p>
+    <p class="text-sm text-gray-500">Última atualização: <strong>{{ lastUpdate }}</strong></p>
+    <p v-if="lastPosition" class="text-sm text-gray-500">
+      Posição atual: <strong>{{ lastPosition.lat.toFixed(5) }}, {{ lastPosition.lon.toFixed(5) }}</strong>
+    </p>
   </div>
+
+  <div v-else class="text-gray-500 italic">Selecione um equipamento no mapa para ver os detalhes.</div>
 </template>

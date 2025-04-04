@@ -8,6 +8,7 @@ const store = useEquipmentStore()
 onMounted(() => {
   store.loadEquipments()
   store.loadPositionHistory()
+  store.loadEquipmentModels();
 })
 </script>
 

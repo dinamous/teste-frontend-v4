@@ -7,16 +7,14 @@ import {
   LCircleMarker,
 } from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
-import AntPath from "@/components/map/AntPath.vue"; // novo componente
+import AntPath from "@/components/map/AntPath.vue";
 
 import { useEquipmentStore } from "@/store/useEquipmentStore";
 import { ref, onMounted, computed } from "vue";
 import type { LatLngExpression } from "leaflet";
 
 const store = useEquipmentStore();
-const selectedEquipmentId = ref<string | null>(null);
-
-const mapRef = ref<any>(null); // cria o ref pro mapa
+const mapRef = ref<any>(null);
 
 // Carrega os dados ao montar o componente
 onMounted(() => {
@@ -32,8 +30,8 @@ function getLatLng(equipmentId: string): LatLngExpression {
 
 // Trajetória completa do equipamento selecionado
 const trajectory = computed(() => {
-  if (!selectedEquipmentId.value) return [];
-  const positions = store.positionHistory[selectedEquipmentId.value] || [];
+  if (!store.selectedEquipmentId) return [];
+  const positions = store.positionHistory[store.selectedEquipmentId] || [];
   return positions.map((p) => [p.lat, p.lon]) as [number, number][];
 });
 </script>
@@ -46,14 +44,14 @@ const trajectory = computed(() => {
 
     <!-- Marcadores de cada equipamento -->
     <LMarker v-for="equip in store.equipments" :key="equip.id" :lat-lng="getLatLng(equip.id)"
-      @click="selectedEquipmentId = equip.id" />
+      @click="store.setSelectedEquipment(equip.id)" />
 
     <!-- Ponto de partida da trajetória -->
-    <LCircleMarker v-if="selectedEquipmentId && trajectory.length" :lat-lng="trajectory[0]" :radius="6" color="green"
-      fill-color="green" :fill-opacity="0.8" />
+    <LCircleMarker v-if="store.selectedEquipmentId && trajectory.length" :lat-lng="trajectory[0]" :radius="6"
+      color="green" fill-color="green" :fill-opacity="0.8" />
 
     <!-- Trajetória do equipamento selecionado -->
-    <AntPath v-if="selectedEquipmentId && trajectory.length" :lat-lngs="trajectory"
+    <AntPath v-if="store.selectedEquipmentId && trajectory.length" :lat-lngs="trajectory"
       :map-object="mapRef?.leafletObject" />
   </LMap>
 </template>

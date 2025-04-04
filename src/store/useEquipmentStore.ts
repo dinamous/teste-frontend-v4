@@ -12,35 +12,61 @@ interface Equipment {
   name: string;
 }
 
+interface EquipmentModel {
+  id: string;
+  name: string;
+}
+
 export const useEquipmentStore = defineStore("equipment", {
   state: () => ({
     equipments: [] as Equipment[],
     positionHistory: {} as Record<string, Position[]>,
-    selectedEquipmentId: null as string | null, // ID do equipamento atualmente selecionado
+    equipmentModels: [] as EquipmentModel[],
+    selectedEquipmentId: null as string | null,
   }),
 
   actions: {
-    // Carrega os dados dos equipamentos
     async loadEquipments() {
       const eq = await fetch("/data/equipment.json").then((res) => res.json());
       this.equipments = eq;
     },
 
-    // Carrega o histórico de posições e reorganiza por ID
     async loadPositionHistory() {
       const pos = await fetch("/data/equipmentPositionHistory.json").then(
         (res) => res.json()
       );
-      // transforma em objeto com chave por equipmentId
       this.positionHistory = Object.fromEntries(
         pos.map((p: any) => [p.equipmentId, p.positions])
       );
+    },
+
+    async loadEquipmentModels() {
+      const models = await fetch("/data/equipmentModel.json").then((res) =>
+        res.json()
+      );
+      this.equipmentModels = models;
     },
 
     getLastPosition(equipmentId: string): Position | null {
       const positions = this.positionHistory[equipmentId];
       if (!positions || positions.length === 0) return null;
       return positions.slice(-1)[0];
+    },
+
+    getEquipmentModelName(equipment: Equipment): string {
+      const model = this.equipmentModels.find(
+        (m) => m.id === equipment.equipmentModelId
+      );
+      return model ? model.name : "Modelo desconhecido";
+    },
+
+    getFormattedLastPosition(equipmentId: string): string {
+      const pos = this.getLastPosition(equipmentId);
+      if (!pos) return "Data desconhecida";
+      return new Date(pos.date).toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
     },
 
     setSelectedEquipment(id: string | null) {
