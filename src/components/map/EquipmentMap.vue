@@ -29,6 +29,7 @@ function getLatLng(equipmentId: string): LatLngExpression {
       attribution="&copy; OpenStreetMap contributors" />
 
     <!-- Itera sobre cada equipamento e adiciona um marcador com sua posição atual -->
-    <LMarker v-for="equip in store.equipments" :key="equip.id" :lat-lng="getLatLng(equip.id)" />
+    <LMarker v-for="equip in store.equipments" :key="equip.id" :lat-lng="getLatLng(equip.id)"
+      @click="store.setSelectedEquipment(equip.id)" />
   </LMap>
 </template>

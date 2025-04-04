@@ -2,7 +2,7 @@
 import EquipmentMap from '@/components/map/EquipmentMap.vue'
 import { useEquipmentStore } from '@/store/useEquipmentStore'
 import { onMounted } from 'vue'
-import { Button } from '@/components/ui/button'
+import EquipmentDetailPanel from '@/components/map/EquipmentDetailPanel.vue'
 const store = useEquipmentStore()
 
 onMounted(() => {
@@ -19,7 +19,7 @@ onMounted(() => {
       <!-- Mapa -->
       <div>
         <EquipmentMap />
-
+        <EquipmentDetailPanel />
       </div>
 
       <!-- Lista de equipamentos -->
