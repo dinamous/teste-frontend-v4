@@ -1,35 +1,56 @@
 <script setup lang="ts">
-import { LMap, LTileLayer, LMarker } from "@vue-leaflet/vue-leaflet";
-
+import {
+  LMap,
+  LTileLayer,
+  LMarker,
+  LPolyline,
+  LCircleMarker,
+} from "@vue-leaflet/vue-leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { useEquipmentStore } from "@/store/useEquipmentStore";
-import { onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import type { LatLngExpression } from "leaflet";
 
 const store = useEquipmentStore();
+const selectedEquipmentId = ref<string | null>(null);
 
-// Carrega os dados assim que o componente é montado
+// Carrega os dados ao montar o componente
 onMounted(() => {
   store.loadEquipments();
   store.loadPositionHistory();
 });
 
-// Função utilitária que transforma a última posição de um equipamento em uma tupla [lat, lon]
+// Última posição de um equipamento
 function getLatLng(equipmentId: string): LatLngExpression {
   const pos = store.getLastPosition(equipmentId);
-  return pos ? [pos.lat, pos.lon] : [0, 0]; // fallback em caso de dados ausentes
+  return pos ? [pos.lat, pos.lon] : [0, 0];
 }
+
+// Trajetória completa do equipamento selecionado
+const trajectory = computed(() => {
+  if (!selectedEquipmentId.value) return [];
+  const positions = store.positionHistory[selectedEquipmentId.value] || [];
+  return positions.map((p) => [p.lat, p.lon]) as LatLngExpression[];
+});
 </script>
 
 <template>
-  <LMap style="height: 500px" class="w-full rounded-xl shadow" :zoom="5" :center="[ -14.2350, -51.9253 ]"
-    :use-global-leaflet="false">
+  <LMap style="height: 500px" :zoom="5" :center="[-14.235, -51.9253]" :use-global-leaflet="false"
+    class="rounded-xl shadow">
     <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       attribution="&copy; OpenStreetMap contributors" />
 
-    <!-- Itera sobre cada equipamento e adiciona um marcador com sua posição atual -->
+    <!-- Marcadores de cada equipamento -->
     <LMarker v-for="equip in store.equipments" :key="equip.id" :lat-lng="getLatLng(equip.id)"
-      @click="store.setSelectedEquipment(equip.id)" />
+      @click="selectedEquipmentId = equip.id" />
+
+    <!-- Ponto de partida da trajetória -->
+    <LCircleMarker v-if="selectedEquipmentId && trajectory.length" :lat-lng="trajectory[0]" :radius="6" color="green"
+      fill-color="green" :fill-opacity="0.8" />
+
+    <!-- Trajetória do equipamento selecionado -->
+    <LPolyline v-if="selectedEquipmentId && trajectory.length" :lat-lngs="trajectory" :weight="4" :color="'blue'"
+      :opacity="0.7" />
   </LMap>
 </template>
