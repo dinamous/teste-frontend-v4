@@ -122,5 +122,21 @@ export const useEquipmentStore = defineStore("equipment", {
     setSelectedEquipment(id: string | null) {
       this.selectedEquipmentId = id;
     },
+
+    getEquipmentName(id: string): string {
+      const equip = this.equipments.find((e) => e.id === id);
+      return equip?.name ?? "Sem nome";
+    },
+
+    getModelName(modelId: string): string {
+      const model = this.equipmentModels.find((m) => m.id === modelId);
+      return model?.name ?? "Modelo desconhecido";
+    },
+
+    selectEquipment(id: string) {
+      this.selectedEquipmentId = id;
+    },
+
+    
   },
 });

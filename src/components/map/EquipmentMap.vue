@@ -1,57 +1,102 @@
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useEquipmentStore } from '@/store/useEquipmentStore';
 import {
   LMap,
   LTileLayer,
   LMarker,
+  LTooltip,
   LPolyline,
   LCircleMarker,
-} from "@vue-leaflet/vue-leaflet";
-import "leaflet/dist/leaflet.css";
-import AntPath from "@/components/map/AntPath.vue";
+} from '@vue-leaflet/vue-leaflet';
+import L from 'leaflet';
 
-import { useEquipmentStore } from "@/store/useEquipmentStore";
-import { ref, onMounted, computed } from "vue";
-import type { LatLngExpression } from "leaflet";
+type Position = {
+  lat: number;
+  lon: number;
+  date: string;
+};
+
+const mapRef = ref();
+const zoom = ref(6);
+const center = ref<[number, number]>([-19.9, -44.0]);
+const url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const attribution =
+  'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
 
 const store = useEquipmentStore();
-const mapRef = ref<any>(null);
+const {
+  equipments,
+  selectedEquipmentId,
+  positionHistory,
+} = storeToRefs(store);
 
-// Carrega os dados ao montar o componente
-onMounted(() => {
-  store.loadEquipments();
-  store.loadPositionHistory();
+const getLastPosition = (equipmentId: string): [number, number] => {
+  const positions = positionHistory.value[equipmentId] || [];
+  const last = positions.length ? positions[positions.length - 1] : null;
+  return last ? [last.lat, last.lon] as [number, number] : [0, 0] as [number, number];
+};
+
+const trajectoryCoordinates = computed(() => {
+  if (!selectedEquipmentId.value) return [];
+  return (positionHistory.value[selectedEquipmentId.value] || [])
+    .filter((p): p is Position => !!p)
+    .map((p) => [p.lat, p.lon] as [number, number]);
 });
 
-// Última posição de um equipamento
-function getLatLng(equipmentId: string): LatLngExpression {
-  const pos = store.getLastPosition(equipmentId);
-  return pos ? [pos.lat, pos.lon] : [0, 0];
-}
+const lastPosition = computed(() => {
+  if (!selectedEquipmentId.value) return null;
+  const positions = positionHistory.value[selectedEquipmentId.value] || [];
+  return positions.length ? positions[positions.length - 1] : null;
+});
 
-// Trajetória completa do equipamento selecionado
-const trajectory = computed(() => {
-  if (!store.selectedEquipmentId) return [];
-  const positions = store.positionHistory[store.selectedEquipmentId] || [];
-  return positions.map((p) => [p.lat, p.lon]) as [number, number][];
+const lastPositions = computed(() => {
+  const result: Record<string, Position | null> = {};
+  for (const equip of equipments.value) {
+    const pos = positionHistory.value[equip.id];
+    result[equip.id] = pos?.length ? pos[pos.length - 1] : null;
+  }
+  return result;
+});
+
+const selectEquipment = (id: string) => {
+  store.selectedEquipmentId = id;
+  const pos = getLastPosition(id);
+  if (mapRef.value && pos) {
+    mapRef.value.leafletObject.setView(pos, 13);
+  }
+};
+
+onMounted(() => {
+  const allPositions = Object.values(positionHistory.value)
+    .flat()
+    .filter((p): p is Position => !!p);
+  if (allPositions.length > 0 && mapRef.value) {
+    const bounds = L.latLngBounds(allPositions.map((p) => [p.lat, p.lon] as [number, number]));
+    mapRef.value.leafletObject.fitBounds(bounds, { padding: [50, 50] });
+  }
 });
 </script>
 
 <template>
-  <LMap ref="mapRef" style="height: 500px" :zoom="5" :center="[-14.235, -51.9253]" :use-global-leaflet="false"
-    class="rounded-xl shadow">
-    <LTileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      attribution="&copy; OpenStreetMap contributors" />
+  <LMap ref="mapRef" :zoom="zoom" :center="center" style="height: 400px; width: 100%">
+    <LTileLayer :url="url" :attribution="attribution" />
 
-    <!-- Marcadores de cada equipamento -->
-    <LMarker v-for="equip in store.equipments" :key="equip.id" :lat-lng="getLatLng(equip.id)"
-      @click="store.setSelectedEquipment(equip.id)" />
+    <LMarker v-for="equipment in equipments" :key="equipment.id" :lat-lng="getLastPosition(equipment.id)"
+      @click="selectEquipment(equipment.id)">
+      <LTooltip>
+        {{ equipment.name }}<br />
+        {{ lastPositions[equipment.id]?.lat?.toFixed(4) ?? '–' }},
+        {{ lastPositions[equipment.id]?.lon?.toFixed(4) ?? '–' }}
+      </LTooltip>
+    </LMarker>
 
-    <!-- Ponto de partida da trajetória -->
-    <LCircleMarker v-if="store.selectedEquipmentId && trajectory.length" :lat-lng="trajectory[0]" :radius="6"
-      color="green" fill-color="green" :fill-opacity="0.8" />
+    <LPolyline v-if="selectedEquipmentId && trajectoryCoordinates.length" :lat-lngs="trajectoryCoordinates" color="blue"
+      :weight="3" :opacity="0.5" />
 
-    <!-- Trajetória do equipamento selecionado -->
-    <AntPath v-if="store.selectedEquipmentId && trajectory.length" :lat-lngs="trajectory"
-      :map-object="mapRef?.leafletObject" />
+    <LCircleMarker v-if="lastPosition" :lat-lng="[lastPosition.lat, lastPosition.lon]" :radius="10" color="green" />
   </LMap>
 </template>
+
+<style scoped></style>
