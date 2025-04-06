@@ -17,12 +17,28 @@ interface EquipmentModel {
   name: string;
 }
 
+interface EquipmentState {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface EquipmentStateHistory {
+  equipmentId: string;
+  states: { equipmentStateId: string; date: string }[];
+}
+
 export const useEquipmentStore = defineStore("equipment", {
   state: () => ({
     equipments: [] as Equipment[],
     positionHistory: {} as Record<string, Position[]>,
     equipmentModels: [] as EquipmentModel[],
     selectedEquipmentId: null as string | null,
+    equipmentStates: [] as EquipmentState[],
+    stateHistory: {} as Record<
+      string,
+      { equipmentStateId: string; date: string }[]
+    >,
   }),
 
   actions: {
@@ -47,6 +63,25 @@ export const useEquipmentStore = defineStore("equipment", {
       this.equipmentModels = models;
     },
 
+    async loadEquipmentStates() {
+      const states = await fetch("/data/equipmentState.json").then((res) =>
+        res.json()
+      );
+      this.equipmentStates = states;
+    },
+
+    async loadStateHistory() {
+      const history = await fetch("/data/equipmentStateHistory.json").then(
+        (res) => res.json()
+      );
+      this.stateHistory = Object.fromEntries(
+        history.map((entry: EquipmentStateHistory) => [
+          entry.equipmentId,
+          entry.states,
+        ])
+      );
+    },
+
     getLastPosition(equipmentId: string): Position | null {
       const positions = this.positionHistory[equipmentId];
       if (!positions || positions.length === 0) return null;
@@ -67,6 +102,21 @@ export const useEquipmentStore = defineStore("equipment", {
         dateStyle: "short",
         timeStyle: "short",
       });
+    },
+
+    getEquipmentStateName(stateId: string): string {
+      const state = this.equipmentStates.find((s) => s.id === stateId);
+      return state ? state.name : "Estado desconhecido";
+    },
+
+    getEquipmentStateColor(stateId: string): string {
+      const state = this.equipmentStates.find((s) => s.id === stateId);
+      return state ? state.color : "#ccc";
+    },
+
+    getStateHistoryForSelected(): { equipmentStateId: string; date: string }[] {
+      if (!this.selectedEquipmentId) return [];
+      return this.stateHistory[this.selectedEquipmentId] || [];
     },
 
     setSelectedEquipment(id: string | null) {

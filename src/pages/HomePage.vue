@@ -6,9 +6,11 @@ import EquipmentDetailPanel from '@/components/map/EquipmentDetailPanel.vue'
 const store = useEquipmentStore()
 
 onMounted(() => {
-  store.loadEquipments()
-  store.loadPositionHistory()
+  store.loadEquipments();
+  store.loadPositionHistory();
   store.loadEquipmentModels();
+  store.loadEquipmentStates()
+  store.loadStateHistory();
 })
 </script>
 
