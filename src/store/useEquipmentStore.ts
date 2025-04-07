@@ -39,6 +39,7 @@ export const useEquipmentStore = defineStore("equipment", {
       string,
       { equipmentStateId: string; date: string }[]
     >,
+    openTimelineEquipmentId: null as string | null,
   }),
 
   actions: {
@@ -137,6 +138,8 @@ export const useEquipmentStore = defineStore("equipment", {
       this.selectedEquipmentId = id;
     },
 
-    
+    setOpenTimelineEquipment(id: string | null) {
+      this.openTimelineEquipmentId = id;
+    },
   },
 });

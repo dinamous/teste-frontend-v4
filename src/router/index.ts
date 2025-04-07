@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import HomePage from "@/pages/HomePage.vue";
+import HomePage from "@/pages/Dashboard.vue";
 import EquipmentDetail from "@/pages/EquipmentDetail.vue";
 
 const router = createRouter({
