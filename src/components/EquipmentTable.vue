@@ -2,14 +2,13 @@
 import { computed } from 'vue'
 import { useEquipmentStore } from '@/store/useEquipmentStore'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 
 // Acessa a store
 const store = useEquipmentStore()
 
 // Computa os dados da tabela, incluindo o último status do equipamento
 const equipmentRows = computed(() => {
-  return store.equipments.map((equip) => {
+  return store.filteredData.equipments.map((equip) => {
     // Última posição formatada
     const lastPos = store.getLastPosition(equip.id)
     const lastPositionText = lastPos

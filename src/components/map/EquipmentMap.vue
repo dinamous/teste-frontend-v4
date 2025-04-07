@@ -27,34 +27,33 @@ const attribution =
 
 const store = useEquipmentStore();
 const {
-  equipments,
+  filteredData,
   selectedEquipmentId,
-  positionHistory,
 } = storeToRefs(store);
 
 const getLastPosition = (equipmentId: string): [number, number] => {
-  const positions = positionHistory.value[equipmentId] || [];
+  const positions = filteredData.value.positionHistory[equipmentId] || [];
   const last = positions.length ? positions[positions.length - 1] : null;
   return last ? [last.lat, last.lon] as [number, number] : [0, 0] as [number, number];
 };
 
 const trajectoryCoordinates = computed(() => {
   if (!selectedEquipmentId.value) return [];
-  return (positionHistory.value[selectedEquipmentId.value] || [])
+  return (filteredData.value.positionHistory[selectedEquipmentId.value] || [])
     .filter((p): p is Position => !!p)
     .map((p) => [p.lat, p.lon] as [number, number]);
 });
 
 const lastPosition = computed(() => {
   if (!selectedEquipmentId.value) return null;
-  const positions = positionHistory.value[selectedEquipmentId.value] || [];
+  const positions = filteredData.value.positionHistory[selectedEquipmentId.value] || [];
   return positions.length ? positions[positions.length - 1] : null;
 });
 
 const lastPositions = computed(() => {
   const result: Record<string, Position | null> = {};
-  for (const equip of equipments.value) {
-    const pos = positionHistory.value[equip.id];
+  for (const equip of filteredData.value.equipments) {
+    const pos = filteredData.value.positionHistory[equip.id];
     result[equip.id] = pos?.length ? pos[pos.length - 1] : null;
   }
   return result;
@@ -69,7 +68,7 @@ const selectEquipment = (id: string) => {
 };
 
 onMounted(() => {
-  const allPositions = Object.values(positionHistory.value)
+  const allPositions = Object.values(filteredData.value.positionHistory)
     .flat()
     .filter((p): p is Position => !!p);
   if (allPositions.length > 0 && mapRef.value) {
@@ -83,7 +82,7 @@ onMounted(() => {
   <LMap ref="mapRef" :zoom="zoom" :center="center" style="height: 400px; width: 100%">
     <LTileLayer :url="url" :attribution="attribution" />
 
-    <LMarker v-for="equipment in equipments" :key="equipment.id" :lat-lng="getLastPosition(equipment.id)"
+    <LMarker v-for="equipment in filteredData.equipments" :key="equipment.id" :lat-lng="getLastPosition(equipment.id)"
       @click="selectEquipment(equipment.id)">
       <LTooltip>
         {{ equipment.name }}<br />

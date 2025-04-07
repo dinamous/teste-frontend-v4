@@ -1,118 +1,93 @@
 <script setup lang="ts">
-import { ref, computed, type Ref } from 'vue'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from '@/components/ui/toggle-group'
-import { RangeCalendar } from '@/components/ui/range-calendar'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Separator } from '@/components/ui/separator'
-import { getLocalTimeZone, today } from '@internationalized/date'
-import { type DateRange } from 'reka-ui'
+import { computed, watch } from 'vue'
+import { useEquipmentStore } from '@/store/useEquipmentStore'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-// Mock: substituir pelo intervalo real do histórico
-const startOfData = today(getLocalTimeZone()).subtract({ days: 30 })
-const endOfData = today(getLocalTimeZone())
+const store = useEquipmentStore()
+const filters = store.filters
 
-const selectedPeriod = ref<'1d' | '7d' | '30d' | 'custom'>('7d')
+// Última data real baseada nas posições
+const latestDate = computed(() => {
+  const allDates = Object.values(store.positionHistory)
+    .flat()
+    .map(p => new Date(p.date).getTime())
 
-const dateRange = ref({
-  start: endOfData.subtract({ days: 7 }),
-  end: endOfData,
-}) as Ref<DateRange>
+  return allDates.length ? new Date(Math.max(...allDates)) : new Date()
+})
 
-const statusOptions = ['Online', 'Offline', 'Manutenção']
-const typeOptions = ['Sensor', 'Gateway', 'Controlador']
+// Atualiza o range de datas com base no período selecionado
+watch(
+  () => filters.period,
+  (period) => {
+    const end = new Date(latestDate.value)
+    const start = new Date(end)
 
-const selectedStatus = ref<string | undefined>()
-const selectedType = ref<string | undefined>()
+    if (period === '1d') start.setDate(end.getDate() - 1)
+    else if (period === '7d') start.setDate(end.getDate() - 7)
+    else if (period === '30d') start.setDate(end.getDate() - 30)
+    else start.setTime(0)
+
+    filters.dateRange.start = start
+    filters.dateRange.end = end
+
+    store.updateFilteredEquipments()
+  },
+  { immediate: true }
+)
+
+// Atualiza ao mudar status ou tipo
+watch(
+  () => [filters.status, filters.type],
+  () => {
+    store.updateFilteredEquipments()
+  }
+)
 </script>
 
 <template>
-  <div class="w-full border-b bg-background px-4 py-2 flex flex-wrap gap-4 items-center">
-    <!-- Select: Tipo de equipamento -->
-    <Select v-model="selectedType">
-      <SelectTrigger class="w-[180px]">
-        <SelectValue placeholder="Tipo de equipamento" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Tipo</SelectLabel>
-          <SelectItem
-            v-for="type in typeOptions"
-            :key="type"
-            :value="type"
-          >
-            {{ type }}
+  <div class="flex flex-wrap gap-4 items-end p-4">
+    <!-- Status -->
+    <div class="w-40">
+      <label class="text-sm text-gray-500 mb-1 block">Status</label>
+      <Select v-model="filters.status">
+        <SelectTrigger>
+          <SelectValue placeholder="Todos" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="null">Todos</SelectItem>
+          <SelectItem v-for="status in store.equipmentStates" :key="status.id" :value="status.name">
+            {{ status.name }}
           </SelectItem>
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+        </SelectContent>
+      </Select>
+    </div>
 
-    <!-- Select: Status do equipamento -->
-    <Select v-model="selectedStatus">
-      <SelectTrigger class="w-[180px]">
-        <SelectValue placeholder="Status" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Status</SelectLabel>
-          <SelectItem
-            v-for="status in statusOptions"
-            :key="status"
-            :value="status"
-          >
-            {{ status }}
+    <!-- Modelo -->
+    <div class="w-50">
+      <label class="text-sm text-gray-500 mb-1 block">Modelo</label>
+      <Select v-model="filters.type">
+        <SelectTrigger>
+          <SelectValue placeholder="Todos" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem :value="null">Todos</SelectItem>
+          <SelectItem v-for="type in store.equipmentModels" :key="type.id" :value="type.name">
+            {{ type.name }}
           </SelectItem>
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+        </SelectContent>
+      </Select>
+    </div>
 
-    <Separator orientation="vertical" class="h-6" />
-
-    <!-- ToggleGroup: Período rápido -->
-    <ToggleGroup v-model="selectedPeriod" type="single" class="gap-1">
-      <ToggleGroupItem value="1d">1 dia</ToggleGroupItem>
-      <ToggleGroupItem value="7d">1 semana</ToggleGroupItem>
-      <ToggleGroupItem value="30d">1 mês</ToggleGroupItem>
-      <ToggleGroupItem value="custom">Personalizado</ToggleGroupItem>
-    </ToggleGroup>
-
-    <!-- RangeCalendar: período personalizado -->
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <div>
-            <RangeCalendar
-              v-if="selectedPeriod === 'custom'"
-              v-model="dateRange"
-              class="rounded-md border"
-              :minValue="startOfData"
-              :maxValue="endOfData"
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Selecione o intervalo desejado (limitado ao histórico)</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <!-- Período -->
+    <div class="w-60">
+      <label class="text-sm text-gray-500 mb-1 block">Período</label>
+      <ToggleGroup v-model="filters.period" variant="outline">
+        <ToggleGroupItem value="1d">1d</ToggleGroupItem>
+        <ToggleGroupItem value="7d">7d</ToggleGroupItem>
+        <ToggleGroupItem value="30d">30d</ToggleGroupItem>
+        <ToggleGroupItem value="custom">Todo</ToggleGroupItem>
+      </ToggleGroup>
+    </div>
   </div>
 </template>
-
-<style scoped>
-/* Garante que o calendário não quebre o layout da barra */
-.range-calendar-wrapper {
-  position: relative;
-  z-index: 50;
-}
-</style>

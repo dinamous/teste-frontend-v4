@@ -25,7 +25,7 @@ const store = useEquipmentStore()
 
 const timeline = computed(() => {
   if (!store.selectedEquipmentId) return []
-  const history = store.stateHistory[store.selectedEquipmentId] || []
+  const history = store.filteredData.stateHistory[store.selectedEquipmentId] || []
   // Inverter a ordem: mais recente no topo
   return [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 })
