@@ -24,20 +24,10 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col p-2">
-    <!-- Espaço reservado para filtros -->
-    <div class="w-full">
-      
-      <!-- Aqui vão os filtros futuros -->
-    </div>
-
-    <!-- Mapa -->
     <div class="flex gap-4 px-4 mt-6">
-      <div class="w-2/3">
+     
         <EquipmentMap />
-      </div>
-      <div class="w-1/3">
-        <!-- <EquipmentDetailPanel /> -->
-      </div>
+     
     </div>
 
     <div class="text-lg font-semibold">

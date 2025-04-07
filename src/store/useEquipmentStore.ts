@@ -77,35 +77,33 @@ export const useEquipmentStore = defineStore("equipment", {
     },
 
     async loadPositionHistory() {
-  const pos = await fetch("/data/equipmentPositionHistory.json").then(
-    (res) => res.json()
-  );
+      const pos = await fetch("/data/equipmentPositionHistory.json").then(
+        (res) => res.json()
+      );
 
-  // Monta o histórico agrupado por equipamento
-  this.positionHistory = this.filteredData.positionHistory =
-    Object.fromEntries(pos.map((p: any) => [p.equipmentId, p.positions]));
+      // Monta o histórico agrupado por equipamento
+      this.positionHistory = this.filteredData.positionHistory =
+        Object.fromEntries(pos.map((p: any) => [p.equipmentId, p.positions]));
 
-  // Extrai todas as datas válidas
-  const allDates = Object.values(this.positionHistory)
-    .flat()
-    .map((p: Position) => new Date(p.date).getTime())
-    .filter((t) => !isNaN(t)); // 🔒 segurança contra datas inválidas
+      // Extrai todas as datas válidas
+      const allDates = Object.values(this.positionHistory)
+        .flat()
+        .map((p: Position) => new Date(p.date).getTime())
+        .filter((t) => !isNaN(t)); // 🔒 segurança contra datas inválidas
 
-  // Calcula range histórico
-  if (allDates.length) {
-    this.historicalRange = {
-      start: new Date(Math.min(...allDates)),
-      end: new Date(Math.max(...allDates)),
-    };
-  } else {
-    this.historicalRange = {
-      start: new Date(0),
-      end: new Date(),
-    };
-  }
-}
-,
-
+      // Calcula range histórico
+      if (allDates.length) {
+        this.historicalRange = {
+          start: new Date(Math.min(...allDates)),
+          end: new Date(Math.max(...allDates)),
+        };
+      } else {
+        this.historicalRange = {
+          start: new Date(0),
+          end: new Date(),
+        };
+      }
+    },
     async loadEquipmentModels() {
       const models = await fetch("/data/equipmentModel.json").then((res) =>
         res.json()
@@ -136,9 +134,9 @@ export const useEquipmentStore = defineStore("equipment", {
       const { type, status, search, period } = this.filters;
 
       // Use historicalRange para definir o intervalo padrão
-      
+
       const end = new Date(this.historicalRange.end);
-      console.log(end)
+      console.log(end);
       end.setHours(23, 59, 59, 999); // Final do último dia registrado
       let start = new Date(this.historicalRange.start);
 
@@ -159,7 +157,7 @@ export const useEquipmentStore = defineStore("equipment", {
       }
 
       // Atualiza o dateRange com base no histórico calculado
-      console.log(start,end)
+      console.log(start, end);
       this.filters.dateRange = { start, end };
 
       const searchTerm = (search || "").toLowerCase().trim();

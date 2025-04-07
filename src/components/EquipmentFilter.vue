@@ -9,6 +9,8 @@ import { Search } from 'lucide-vue-next'
 const store = useEquipmentStore()
 const filters = store.filters
 
+const searchQuery = ref('')
+
 // Última data real baseada nas posições
 const latestDate = computed(() => {
   const allDates = Object.values(store.positionHistory)
@@ -18,10 +20,7 @@ const latestDate = computed(() => {
   return allDates.length ? new Date(Math.max(...allDates)) : new Date()
 })
 
-// Atualiza o range de datas com base no período selecionado
-
-
-// Atualiza ao mudar status ou tipo
+// Atualiza ao mudar status, tipo ou período
 watch(
   () => [filters.status, filters.type],
   () => {
@@ -29,18 +28,23 @@ watch(
   }
 )
 
-const searchQuery = ref('')
+watch(
+  () => filters.period,
+  () => {
+    store.updateFilteredEquipments()
+  }
+)
 
-// Atualiza o filtro na store toda vez que o usuário digitar
+// Atualiza o filtro de busca
 watch(searchQuery, (newValue) => {
   store.filters.search = newValue
   store.updateFilteredEquipments()
 })
 
+// Inicializa os dados filtrados ao montar
 onMounted(() => {
   store.updateFilteredEquipments()
 })
-
 </script>
 
 <template>
@@ -87,14 +91,13 @@ onMounted(() => {
         <ToggleGroupItem value="custom">Todo</ToggleGroupItem>
       </ToggleGroup>
     </div>
-    <div class="w-60 relative ">
-      <Input id="search" v-model="searchQuery" type="text" placeholder="Pesquisar..." class="pl-10"
-       />
+
+    <!-- Busca -->
+    <div class="w-60 relative">
+      <Input id="search" v-model="searchQuery" type="text" placeholder="Pesquisar..." class="pl-10" />
       <span class="absolute start-0 inset-y-0 flex items-center justify-center px-2">
         <Search class="size-6 text-muted-foreground" />
       </span>
     </div>
   </div>
-
-
 </template>
