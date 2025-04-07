@@ -46,7 +46,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex flex-wrap gap-4 items-end p-4">
+  <div class="flex flex-wrap gap-2 items-end px-4 py-2">
     <!-- Status -->
     <div class="w-40">
       <label class="text-sm text-gray-500 mb-1 block">Status</label>

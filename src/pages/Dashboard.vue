@@ -21,7 +21,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col p-4">
+  <div class="flex flex-col p-2">
     <!-- Espaço reservado para filtros -->
     <div class="w-full">
       
@@ -29,7 +29,7 @@ onMounted(() => {
     </div>
 
     <!-- Mapa -->
-    <div class="flex gap-6 px-4 mt-6">
+    <div class="flex gap-4 px-4 mt-6">
       <div class="w-2/3">
         <EquipmentMap />
       </div>
@@ -42,7 +42,7 @@ onMounted(() => {
         <EquipmentFilter/>
       </div>
       <!-- Tabela de Equipamentos -->
-      <div class="flex gap-6 px-4 mt-2">
+      <div class="flex gap-4 px-4">
         <div class="w-2/3">
           <EquipmentTable />
         </div>

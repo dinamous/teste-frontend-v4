@@ -7,16 +7,10 @@ import {
   LTileLayer,
   LMarker,
   LTooltip,
-  LPolyline,
-  LCircleMarker,
+  LCircleMarker
 } from '@vue-leaflet/vue-leaflet';
 import L from 'leaflet';
-
-type Position = {
-  lat: number;
-  lon: number;
-  date: string;
-};
+import AntPath from "./AntPath.vue";
 
 const mapRef = ref();
 const zoom = ref(10);
@@ -29,34 +23,79 @@ const store = useEquipmentStore();
 const {
   filteredData,
   selectedEquipmentId,
+  equipmentStates,
 } = storeToRefs(store);
 
+const emojiByModelName: Record<string, string> = {
+  'Caminhão de carga': '🚚',
+  'Harvester': '🌾',
+  'Garra traçadora': '🏗️',
+  // Adicione outros modelos conforme necessário
+};
+
+// Pega última posição
 const getLastPosition = (equipmentId: string): [number, number] => {
   const positions = filteredData.value.positionHistory[equipmentId] || [];
   const last = positions.length ? positions[positions.length - 1] : null;
-  return last ? [last.lat, last.lon] as [number, number] : [0, 0] as [number, number];
+  return last ? [last.lat, last.lon] : [0, 0];
 };
 
-const trajectoryCoordinates = computed(() => {
-  if (!selectedEquipmentId.value) return [];
-  return (filteredData.value.positionHistory[selectedEquipmentId.value] || [])
-    .filter((p): p is Position => !!p)
-    .map((p) => [p.lat, p.lon] as [number, number]);
-});
+// Pega primeira posição
+const getFirstPosition = (equipmentId: string) => {
+  const positions = filteredData.value.positionHistory[equipmentId] || [];
+  return positions.length ? positions[0] : null;
+};
 
-const lastPosition = computed(() => {
-  if (!selectedEquipmentId.value) return null;
-  const positions = filteredData.value.positionHistory[selectedEquipmentId.value] || [];
-  return positions.length ? positions[positions.length - 1] : null;
-});
-
+// Últimas posições para tooltip
 const lastPositions = computed(() => {
-  const result: Record<string, Position | null> = {};
+  const result: Record<string, { lat: number; lon: number } | null> = {};
   for (const equip of filteredData.value.equipments) {
     const pos = filteredData.value.positionHistory[equip.id];
     result[equip.id] = pos?.length ? pos[pos.length - 1] : null;
   }
   return result;
+});
+
+// Trajetória do equipamento selecionado
+const trajectoryCoordinates = computed(() => {
+  if (!selectedEquipmentId.value) return [];
+  return (filteredData.value.positionHistory[selectedEquipmentId.value] || [])
+    .map((p) => [p.lat, p.lon] as [number, number]);
+});
+
+// Ícone customizado
+const getMarkerIcon = (equipmentId: string, modelName: string): L.Icon<L.IconOptions> => {
+  const stateHist = filteredData.value.stateHistory[equipmentId] || [];
+  const lastStateId = stateHist.length ? stateHist[stateHist.length - 1].equipmentStateId : null;
+  const stateColor = equipmentStates.value.find((s) => s.id === lastStateId)?.color || "#999";
+  const emoji = emojiByModelName[modelName] || "❓";
+
+  return new L.DivIcon({
+    className: "",
+    html: `
+      <div style="
+        background: white;
+        border: 3px solid ${stateColor};
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      ">${emoji}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  }) as unknown as L.Icon<L.IconOptions>;
+};
+
+
+onMounted(() => {
+  const allPositions = Object.values(filteredData.value.positionHistory).flat();
+  if (allPositions.length > 0 && mapRef.value) {
+    const bounds = L.latLngBounds(allPositions.map((p) => [p.lat, p.lon]));
+    mapRef.value.leafletObject.fitBounds(bounds, { padding: [50, 50] });
+  }
 });
 
 const selectEquipment = (id: string) => {
@@ -67,22 +106,15 @@ const selectEquipment = (id: string) => {
   }
 };
 
-onMounted(() => {
-  const allPositions = Object.values(filteredData.value.positionHistory)
-    .flat()
-    .filter((p): p is Position => !!p);
-  if (allPositions.length > 0 && mapRef.value) {
-    const bounds = L.latLngBounds(allPositions.map((p) => [p.lat, p.lon] as [number, number]));
-    mapRef.value.leafletObject.fitBounds(bounds, { padding: [50, 50] });
-  }
-});
 </script>
 
 <template>
   <LMap ref="mapRef" :zoom="zoom" :center="center" style="height: 400px; width: 100%">
     <LTileLayer :url="url" :attribution="attribution" />
 
+    <!-- Marcadores com ícones personalizados -->
     <LMarker v-for="equipment in filteredData.equipments" :key="equipment.id" :lat-lng="getLastPosition(equipment.id)"
+      :icon="getMarkerIcon(equipment.id, store.getModelName(equipment.equipmentModelId))"
       @click="selectEquipment(equipment.id)">
       <LTooltip>
         {{ equipment.name }}<br />
@@ -91,11 +123,13 @@ onMounted(() => {
       </LTooltip>
     </LMarker>
 
-    <LPolyline v-if="selectedEquipmentId && trajectoryCoordinates.length" :lat-lngs="trajectoryCoordinates" color="blue"
-      :weight="3" :opacity="0.5" />
+    <!-- Linha animada com AntPath -->
+    <AntPath v-if="selectedEquipmentId && trajectoryCoordinates.length" :lat-lngs="trajectoryCoordinates"
+      :map-object="mapRef?.leafletObject" />
 
-    <LCircleMarker v-if="lastPosition" :lat-lng="[lastPosition.lat, lastPosition.lon]" :radius="10" color="green" />
+    <!-- Ponto de partida -->
+    <LCircleMarker v-if="selectedEquipmentId && getFirstPosition(selectedEquipmentId)"
+      :lat-lng="[getFirstPosition(selectedEquipmentId)!.lat, getFirstPosition(selectedEquipmentId)!.lon]" :radius="4"
+      color="green" :fill-opacity="0.4" />
   </LMap>
 </template>
-
-<style scoped></style>
