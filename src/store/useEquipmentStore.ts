@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 
+// Tipagens para os dados utilizados
 interface Position {
   date: string;
   lat: number;
@@ -31,28 +32,28 @@ interface EquipmentStateHistory {
 
 export const useEquipmentStore = defineStore("equipment", {
   state: () => ({
+    // Dados brutos carregados dos arquivos
     equipments: [] as Equipment[],
     positionHistory: {} as Record<string, Position[]>,
     equipmentModels: [] as EquipmentModel[],
     equipmentStates: [] as EquipmentState[],
-    stateHistory: {} as Record<
-      string,
-      { equipmentStateId: string; date: string }[]
-    >,
+    stateHistory: {} as Record<string, { equipmentStateId: string; date: string }[]>,
+
+    // Equipamento selecionado e linha do tempo ativa
     selectedEquipmentId: null as string | null,
     openTimelineEquipmentId: null as string | null,
 
-    // Novo campo para armazenar o intervalo histórico dos dados de posição
+    // Intervalo total de datas baseado nos dados de posição
     historicalRange: {
       start: new Date(0),
       end: new Date(),
     },
 
+    // Filtros aplicáveis na interface
     filters: {
       type: null as string | null,
       status: null as string | null,
       period: "custom" as "1d" | "7d" | "30d" | "custom",
-      // dateRange será recalculado com base no historicalRange e no período selecionado
       dateRange: {
         start: new Date(0),
         end: new Date(),
@@ -60,22 +61,22 @@ export const useEquipmentStore = defineStore("equipment", {
       search: "",
     },
 
+    // Dados filtrados usados em mapa, tabela e gráficos
     filteredData: {
       equipments: [] as Equipment[],
       positionHistory: {} as Record<string, Position[]>,
-      stateHistory: {} as Record<
-        string,
-        { equipmentStateId: string; date: string }[]
-      >,
+      stateHistory: {} as Record<string, { equipmentStateId: string; date: string }[]>,
     },
   }),
 
   actions: {
+    // Carrega os equipamentos
     async loadEquipments() {
       const eq = await fetch("/data/equipment.json").then((res) => res.json());
       this.equipments = this.filteredData.equipments = eq;
     },
 
+    // Carrega histórico de posições e define o intervalo global (historicalRange)
     async loadPositionHistory() {
       const pos = await fetch("/data/equipmentPositionHistory.json").then(
         (res) => res.json()
@@ -111,6 +112,7 @@ export const useEquipmentStore = defineStore("equipment", {
       this.equipmentModels = models;
     },
 
+    // Carrega os estados possíveis dos equipamentos
     async loadEquipmentStates() {
       const states = await fetch("/data/equipmentState.json").then((res) =>
         res.json()
@@ -118,26 +120,24 @@ export const useEquipmentStore = defineStore("equipment", {
       this.equipmentStates = states;
     },
 
+    // Carrega histórico de estados dos equipamentos
     async loadStateHistory() {
-      const history = await fetch("/data/equipmentStateHistory.json").then(
-        (res) => res.json()
+      const history = await fetch("/data/equipmentStateHistory.json").then((res) =>
+        res.json()
       );
       this.stateHistory = Object.fromEntries(
-        history.map((entry: EquipmentStateHistory) => [
-          entry.equipmentId,
-          entry.states,
-        ])
+        history.map((entry: EquipmentStateHistory) => [entry.equipmentId, entry.states])
       );
     },
 
+    // Aplica os filtros (busca, tipo, status e período)
     updateFilteredEquipments() {
       const { type, status, search, period } = this.filters;
 
       // Use historicalRange para definir o intervalo padrão
 
       const end = new Date(this.historicalRange.end);
-      console.log(end);
-      end.setHours(23, 59, 59, 999); // Final do último dia registrado
+      end.setHours(23, 59, 59, 999);
       let start = new Date(this.historicalRange.start);
 
       if (period === "1d") {
@@ -156,13 +156,11 @@ export const useEquipmentStore = defineStore("equipment", {
         start = new Date(this.filters.dateRange.start);
       }
 
-      // Atualiza o dateRange com base no histórico calculado
-      console.log(start, end);
       this.filters.dateRange = { start, end };
 
       const searchTerm = (search || "").toLowerCase().trim();
 
-      // Filtra os equipamentos pela busca, tipo e status (sem considerar a data para não excluí-los)
+      // Filtra equipamentos
       const filteredEquipments = this.equipments.filter((equipment) => {
         const model = this.equipmentModels.find(
           (m) => m.id === equipment.equipmentModelId
@@ -190,27 +188,26 @@ export const useEquipmentStore = defineStore("equipment", {
 
       this.filteredData.equipments = filteredEquipments;
 
-      // Aplica os filtros de data apenas aos históricos de posição e estado, não removendo os equipamentos
+      // Aplica os filtros de data ao histórico
       this.filteredData.positionHistory = {};
       this.filteredData.stateHistory = {};
 
       for (const equip of filteredEquipments) {
         const allPositions = this.positionHistory[equip.id] || [];
-        const filteredPositions = allPositions.filter((pos) => {
+        this.filteredData.positionHistory[equip.id] = allPositions.filter((pos) => {
           const d = new Date(pos.date);
           return d >= start && d <= end;
         });
-        this.filteredData.positionHistory[equip.id] = filteredPositions;
 
         const allStates = this.stateHistory[equip.id] || [];
-        const filteredStates = allStates.filter((s) => {
+        this.filteredData.stateHistory[equip.id] = allStates.filter((s) => {
           const d = new Date(s.date);
           return d >= start && d <= end;
         });
-        this.filteredData.stateHistory[equip.id] = filteredStates;
       }
     },
 
+    // Utilitários para obter dados de posição e estado
     getLastPosition(equipmentId: string): Position | null {
       const positions = this.positionHistory[equipmentId];
       if (!positions || positions.length === 0) return null;
@@ -251,6 +248,7 @@ export const useEquipmentStore = defineStore("equipment", {
       return model?.name ?? "Modelo desconhecido";
     },
 
+    // Ações para seleção de equipamento
     selectEquipment(id: string) {
       this.selectedEquipmentId = id;
     },

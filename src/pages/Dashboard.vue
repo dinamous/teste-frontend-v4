@@ -15,7 +15,6 @@ onMounted(() => {
   store.loadEquipmentModels();
   store.loadEquipmentStates()
   store.loadStateHistory();
-
   store.updateFilteredEquipments()
 
 })

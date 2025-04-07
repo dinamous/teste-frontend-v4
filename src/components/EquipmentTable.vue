@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useEquipmentStore } from '@/store/useEquipmentStore'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
 
-// Acessa a store
 const store = useEquipmentStore()
 
 // Computa os dados da tabela, incluindo o último status do equipamento
