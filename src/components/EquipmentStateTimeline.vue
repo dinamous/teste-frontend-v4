@@ -9,67 +9,74 @@ import {
   StepperDescription,
   StepperTrigger,
 } from '@/components/ui/stepper'
-import { Check, Circle, Dot } from 'lucide-vue-next'
 
-// Acessa a store
+import { AlertCircle, CheckCircle2, Loader2, Info } from 'lucide-vue-next'
+
+// Ícones personalizados por status (ajuste conforme seus estados)
+const stateIcons: Record<string, any> = {
+  ativo: CheckCircle2,
+  inativo: AlertCircle,
+  manutencao: Loader2,
+  // estado padrão
+  default: Info,
+}
+
 const store = useEquipmentStore()
 
-// Computa o timeline com base no equipamento selecionado na store
 const timeline = computed(() => {
   if (!store.selectedEquipmentId) return []
-  const entries = store.stateHistory[store.selectedEquipmentId] || []
-  // Ordena as entradas por data (crescente)
-  return [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const history = store.stateHistory[store.selectedEquipmentId] || []
+  // Inverter a ordem: mais recente no topo
+  return [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 })
 
-// Define o total de passos (timeline)
-const totalSteps = computed(() => timeline.value.length)
+function getIcon(stateId: string) {
+  const stateName = store.getEquipmentStateName(stateId)?.toLowerCase()
+  return stateIcons[stateName] || stateIcons.default
+}
 
-// Para cada passo, definimos o estado:
-// - Se não há entradas, nenhum passo é exibido.
-// - O último passo (índice igual a totalSteps - 1) é "ativo" e os anteriores são "completed".
-function getStepState(index: number): 'completed' | 'active' | 'inactive' {
-  if (index < totalSteps.value - 1) return 'completed'
-  if (index === totalSteps.value - 1) return 'active'
-  return 'inactive'
+function getColor(stateId: string): string {
+  return store.getEquipmentStateColor(stateId) || '#999'
 }
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-md">
-    <Stepper orientation="vertical" class="flex flex-col gap-10">
-      <StepperItem v-for="(entry, index) in timeline" :key="index" :step="index + 1" v-slot="{ state }"
-        class="relative flex w-full items-start gap-6" :data-state="getStepState(index)">
-        <!-- Exibe o separador, exceto no último passo -->
-        <StepperSeparator v-if="index !== totalSteps - 1"
-          class="absolute left-[18px] top-[38px] block h-[105%] w-0.5 shrink-0 rounded-full bg-muted" />
+  <div class="mt-6 rounded-md border border-gray-200" style="height: 40vh; overflow-y: auto;">
+    <template v-if="!store.selectedEquipmentId">
+      <div class="flex flex-col items-center justify-center h-full text-gray-500">
+        <Info class="h-10 w-10 mb-2" />
+        <p class="font-medium">Nenhum equipamento selecionado</p>
+      </div>
+    </template>
 
-        <StepperTrigger as-child>
-          <button :class="[
-            'z-10 rounded-full shrink-0 p-2',
-            getStepState(index) === 'active' ? 'ring-2 ring-ring ring-offset-2 ring-offset-background' : '',
-            getStepState(index) === 'completed' ? 'bg-primary text-white' : 'bg-outline text-muted'
-          ]">
-            <Check v-if="getStepState(index) === 'completed'" class="h-5 w-5" />
-            <Circle v-else-if="getStepState(index) === 'active'" class="h-5 w-5" />
-            <Dot v-else class="h-5 w-5" />
-          </button>
-        </StepperTrigger>
+    <template v-else>
+      <p class="font-medium pt-8 pl-8">Histórico de Estados do Equipamento</p>
+      <Stepper orientation="vertical" class="mx-auto flex w-full flex-col gap-10 p-8">
+        <StepperItem v-for="(entry, index) in timeline" :key="index" :step="index + 1"
+          class="relative flex w-full items-start gap-6 ">
+          <!-- linha vertical -->
+          <StepperSeparator v-if="index !== timeline.length - 1"
+            class="absolute left-[18px] top-[38px] block h-[105%] w-0.5 shrink-0 rounded-full bg-muted" />
 
-        <div class="flex flex-col gap-1">
-          <StepperTitle :class="getStepState(index) === 'active' ? 'text-primary' : ''"
-            class="text-sm font-semibold transition">
-            {{ store.getEquipmentStateName(entry.equipmentStateId) }}
-          </StepperTitle>
-          <StepperDescription class="text-xs text-muted-foreground transition">
-            {{ new Date(entry.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) }}
-          </StepperDescription>
-        </div>
-      </StepperItem>
-    </Stepper>
+          <!-- ícone -->
+          <StepperTrigger as-child>
+            <button class="z-10 rounded-full shrink-0 p-2"
+              :style="{ backgroundColor: getColor(entry.equipmentStateId) }">
+              <component :is="getIcon(entry.equipmentStateId)" class="text-white h-5 w-5" />
+            </button>
+          </StepperTrigger>
+
+          <!-- texto -->
+          <div class="flex flex-col gap-1">
+            <StepperTitle class="text-sm font-semibold">
+              {{ store.getEquipmentStateName(entry.equipmentStateId) }}
+            </StepperTitle>
+            <StepperDescription class="text-xs text-muted-foreground">
+              {{ new Date(entry.date).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) }}
+            </StepperDescription>
+          </div>
+        </StepperItem>
+      </Stepper>
+    </template>
   </div>
 </template>
-
-<style scoped>
-/* Você pode adicionar estilos personalizados se necessário */
-</style>

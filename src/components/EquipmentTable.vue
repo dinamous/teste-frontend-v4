@@ -1,66 +1,78 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useEquipmentStore } from '@/store/useEquipmentStore'
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 
+// Acessa a store
 const store = useEquipmentStore()
-const { equipments, positionHistory, selectedEquipmentId } = storeToRefs(store)
 
-// Computa as últimas posições para cada equipamento
-const lastPositions = computed(() => {
-  const result: Record<string, { lat: number; lon: number } | null> = {}
-  for (const equip of equipments.value) {
-    const posList = store.positionHistory[equip.id] || []
-    result[equip.id] = posList.length ? { lat: posList[posList.length - 1].lat, lon: posList[posList.length - 1].lon } : null
-  }
-  return result
+// Computa os dados da tabela, incluindo o último status do equipamento
+const equipmentRows = computed(() => {
+  return store.equipments.map((equip) => {
+    // Última posição formatada
+    const lastPos = store.getLastPosition(equip.id)
+    const lastPositionText = lastPos
+      ? `${lastPos.lat.toFixed(4)}, ${lastPos.lon.toFixed(4)}`
+      : '–'
+    // Última data formatada
+    const lastDate = store.getFormattedLastPosition(equip.id)
+    // Último status (obtido do histórico de estados)
+    const history = store.stateHistory[equip.id] || []
+    const lastStateEntry = history.length ? history[history.length - 1] : null
+    const lastStatus = lastStateEntry
+      ? store.getEquipmentStateName(lastStateEntry.equipmentStateId)
+      : '–'
+    const lastStatusColor = lastStateEntry
+      ? store.getEquipmentStateColor(lastStateEntry.equipmentStateId)
+      : '#ccc'
+    return {
+      id: equip.id,
+      name: equip.name,
+      model: store.getModelName(equip.equipmentModelId),
+      lastPositionText,
+      lastDate,
+      lastStatus,
+      lastStatusColor,
+    }
+  })
 })
 
-// Função para selecionar um equipamento (ao clicar na linha)
-const handleSelect = (id: string) => {
+// Seleciona o equipamento ao clicar na linha
+function handleRowClick(id: string) {
   store.selectEquipment(id)
-}
-
-// Função para abrir a timeline para um equipamento específico
-const openTimelineFor = (id: string) => {
-  store.setOpenTimelineEquipment(id)
 }
 </script>
 
 <template>
   <div class="mt-6">
-    <div class="rounded-2xl border shadow bg-white dark:bg-black overflow-auto">
-      <table class="min-w-full text-sm">
-        <thead class="border-b bg-gray-100 dark:bg-gray-900 text-gray-600">
-          <tr>
-            <th class="px-4 py-2 text-left">Nome</th>
-            <th class="px-4 py-2 text-left">Modelo</th>
-            <th class="px-4 py-2 text-left">Última Posição</th>
-            <th class="px-4 py-2 text-left">Última Data</th>
-            <th class="px-4 py-2 text-left">Histórico</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-100">
-          <tr v-for="equip in equipments" :key="equip.id"
-            class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition" @click="handleSelect(equip.id)">
-            <td class="px-4 py-3 font-medium text-gray-800">{{ equip.name }}</td>
-            <td class="px-4 py-3">{{ store.getModelName(equip.equipmentModelId) }}</td>
-            <td class="px-4 py-3">
-              <template v-if="lastPositions[equip.id]">
-                {{ lastPositions[equip.id]?.lat.toFixed(4) }}, {{ lastPositions[equip.id]?.lon.toFixed(4) }}
-              </template>
-              <template v-else>–</template>
-            </td>
-            <td class="px-4 py-3">{{ store.getFormattedLastPosition(equip.id) }}</td>
-            <td class="px-4 py-3">
-              <Button variant="outline" size="sm" @click.stop="openTimelineFor(equip.id)">
-                Histórico
-              </Button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="rounded-md border shadow overflow-auto" style="height: 40vh;">
+      <Table class="w-full">
+        <TableHeader>
+          <TableRow>
+            <TableHead class="px-4 py-2">Nome</TableHead>
+            <TableHead class="px-4 py-2">Modelo</TableHead>
+            <TableHead class="px-4 py-2">Última Posição</TableHead>
+            <TableHead class="px-4 py-2">Última Data</TableHead>
+            <TableHead class="px-4 py-2">Histórico</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="row in equipmentRows" :key="row.id" @click="handleRowClick(row.id)"
+            class="cursor-pointer hover:bg-gray-50 transition"
+            :class="{ 'bg-accent': store.selectedEquipmentId === row.id }">
+            <TableCell class="px-4 py-2 font-medium">{{ row.name }}</TableCell>
+            <TableCell class="px-4 py-2">{{ row.model }}</TableCell>
+            <TableCell class="px-4 py-2">{{ row.lastPositionText }}</TableCell>
+            <TableCell class="px-4 py-2">{{ row.lastDate }}</TableCell>
+            <TableCell class="px-4 py-2">
+              <span class="px-2 py-1 rounded text-white text-xs" :style="{ backgroundColor: row.lastStatusColor }">
+                {{ row.lastStatus }}
+              </span>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
     </div>
   </div>
 </template>

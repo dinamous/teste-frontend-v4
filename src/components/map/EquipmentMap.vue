@@ -19,8 +19,8 @@ type Position = {
 };
 
 const mapRef = ref();
-const zoom = ref(6);
-const center = ref<[number, number]>([-19.9, -44.0]);
+const zoom = ref(10);
+const center = ref<[number, number]>([-19.1, -46.1]);
 const url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const attribution =
   'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
