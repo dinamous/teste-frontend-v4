@@ -34,22 +34,30 @@ export const useEquipmentStore = defineStore("equipment", {
     equipments: [] as Equipment[],
     positionHistory: {} as Record<string, Position[]>,
     equipmentModels: [] as EquipmentModel[],
-    selectedEquipmentId: null as string | null,
     equipmentStates: [] as EquipmentState[],
     stateHistory: {} as Record<
       string,
       { equipmentStateId: string; date: string }[]
     >,
+    selectedEquipmentId: null as string | null,
     openTimelineEquipmentId: null as string | null,
+
+    // Novo campo para armazenar o intervalo histórico dos dados de posição
+    historicalRange: {
+      start: new Date(0),
+      end: new Date(),
+    },
 
     filters: {
       type: null as string | null,
       status: null as string | null,
       period: "custom" as "1d" | "7d" | "30d" | "custom",
+      // dateRange será recalculado com base no historicalRange e no período selecionado
       dateRange: {
         start: new Date(0),
         end: new Date(),
       },
+      search: "",
     },
 
     filteredData: {
@@ -66,17 +74,37 @@ export const useEquipmentStore = defineStore("equipment", {
     async loadEquipments() {
       const eq = await fetch("/data/equipment.json").then((res) => res.json());
       this.equipments = this.filteredData.equipments = eq;
-      
     },
 
     async loadPositionHistory() {
-      const pos = await fetch("/data/equipmentPositionHistory.json").then(
-        (res) => res.json()
-      );
-      this.positionHistory = this.filteredData.positionHistory = Object.fromEntries(
-        pos.map((p: any) => [p.equipmentId, p.positions])
-      );
-    },
+  const pos = await fetch("/data/equipmentPositionHistory.json").then(
+    (res) => res.json()
+  );
+
+  // Monta o histórico agrupado por equipamento
+  this.positionHistory = this.filteredData.positionHistory =
+    Object.fromEntries(pos.map((p: any) => [p.equipmentId, p.positions]));
+
+  // Extrai todas as datas válidas
+  const allDates = Object.values(this.positionHistory)
+    .flat()
+    .map((p: Position) => new Date(p.date).getTime())
+    .filter((t) => !isNaN(t)); // 🔒 segurança contra datas inválidas
+
+  // Calcula range histórico
+  if (allDates.length) {
+    this.historicalRange = {
+      start: new Date(Math.min(...allDates)),
+      end: new Date(Math.max(...allDates)),
+    };
+  } else {
+    this.historicalRange = {
+      start: new Date(0),
+      end: new Date(),
+    };
+  }
+}
+,
 
     async loadEquipmentModels() {
       const models = await fetch("/data/equipmentModel.json").then((res) =>
@@ -104,60 +132,86 @@ export const useEquipmentStore = defineStore("equipment", {
       );
     },
 
-   updateFilteredEquipments() {
-  const { type, status, dateRange } = this.filters;
+    updateFilteredEquipments() {
+      const { type, status, search, period } = this.filters;
 
-  const start = new Date(dateRange.start);
-  const end = new Date(dateRange.end);
+      // Use historicalRange para definir o intervalo padrão
+      
+      const end = new Date(this.historicalRange.end);
+      console.log(end)
+      end.setHours(23, 59, 59, 999); // Final do último dia registrado
+      let start = new Date(this.historicalRange.start);
 
-  const filteredEquipments = this.equipments.filter((equipment) => {
-    const model = this.equipmentModels.find(
-      (m) => m.id === equipment.equipmentModelId
-    );
-    const modelName = model?.name || null;
+      if (period === "1d") {
+        start = new Date(end);
+        start.setDate(end.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+      } else if (period === "7d") {
+        start = new Date(end);
+        start.setDate(end.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+      } else if (period === "30d") {
+        start = new Date(end);
+        start.setDate(end.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
+      } else {
+        start = new Date(this.filters.dateRange.start);
+      }
 
-    const stateHistory = this.stateHistory[equipment.id] || [];
-    const lastStateId = stateHistory[stateHistory.length - 1]?.equipmentStateId;
-    const state = this.equipmentStates.find((s) => s.id === lastStateId);
-    const stateName = state?.name || null;
+      // Atualiza o dateRange com base no histórico calculado
+      console.log(start,end)
+      this.filters.dateRange = { start, end };
 
-    const positions = this.positionHistory[equipment.id] || [];
-    const lastPos = positions[positions.length - 1];
-    const lastDate = lastPos ? new Date(lastPos.date) : null;
-    const inDateRange = lastDate
-      ? lastDate >= start && lastDate <= end
-      : false;
+      const searchTerm = (search || "").toLowerCase().trim();
 
-    return (
-      (!type || modelName === type) &&
-      (!status || stateName === status) &&
-      inDateRange
-    );
-  });
+      // Filtra os equipamentos pela busca, tipo e status (sem considerar a data para não excluí-los)
+      const filteredEquipments = this.equipments.filter((equipment) => {
+        const model = this.equipmentModels.find(
+          (m) => m.id === equipment.equipmentModelId
+        );
+        const modelName = model?.name || "";
 
-  this.filteredData.equipments = filteredEquipments;
+        const stateHist = this.stateHistory[equipment.id] || [];
+        const lastStateId =
+          stateHist.length > 0
+            ? stateHist[stateHist.length - 1].equipmentStateId
+            : null;
+        const state = this.equipmentStates.find((s) => s.id === lastStateId);
+        const stateName = state?.name || "";
 
-  // 🎯 Preenche o histórico filtrado por equipamento
-  this.filteredData.positionHistory = {};
-  this.filteredData.stateHistory = {};
+        const matchesSearch =
+          equipment.name.toLowerCase().includes(searchTerm) ||
+          modelName.toLowerCase().includes(searchTerm);
 
-  for (const equip of filteredEquipments) {
-    const allPositions = this.positionHistory[equip.id] || [];
-    const filteredPositions = allPositions.filter((pos) => {
-      const d = new Date(pos.date);
-      return d >= start && d <= end;
-    });
-    this.filteredData.positionHistory[equip.id] = filteredPositions;
+        return (
+          (!type || modelName === type) &&
+          (!status || stateName === status) &&
+          matchesSearch
+        );
+      });
 
-    const allStates = this.stateHistory[equip.id] || [];
-    const filteredStates = allStates.filter((s) => {
-      const d = new Date(s.date);
-      return d >= start && d <= end;
-    });
-    this.filteredData.stateHistory[equip.id] = filteredStates;
-  }
-},
+      this.filteredData.equipments = filteredEquipments;
 
+      // Aplica os filtros de data apenas aos históricos de posição e estado, não removendo os equipamentos
+      this.filteredData.positionHistory = {};
+      this.filteredData.stateHistory = {};
+
+      for (const equip of filteredEquipments) {
+        const allPositions = this.positionHistory[equip.id] || [];
+        const filteredPositions = allPositions.filter((pos) => {
+          const d = new Date(pos.date);
+          return d >= start && d <= end;
+        });
+        this.filteredData.positionHistory[equip.id] = filteredPositions;
+
+        const allStates = this.stateHistory[equip.id] || [];
+        const filteredStates = allStates.filter((s) => {
+          const d = new Date(s.date);
+          return d >= start && d <= end;
+        });
+        this.filteredData.stateHistory[equip.id] = filteredStates;
+      }
+    },
 
     getLastPosition(equipmentId: string): Position | null {
       const positions = this.positionHistory[equipmentId];
