@@ -6,7 +6,6 @@ import { useEquipmentStore } from '@/store/useEquipmentStore';
 import { onMounted } from 'vue';
 import EquipmentStateTimeline from '@/components/EquipmentStateTimeline.vue';
 import EquipmentFilter from '@/components/EquipmentFilter.vue';
-import EquipmentDetailPanel from '@/components/map/EquipmentDetailPanel.vue';
 
 const store = useEquipmentStore();
 
@@ -16,6 +15,9 @@ onMounted(() => {
   store.loadEquipmentModels();
   store.loadEquipmentStates()
   store.loadStateHistory();
+
+  store.updateFilteredEquipments()
+
 })
 
 </script>

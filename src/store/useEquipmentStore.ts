@@ -124,7 +124,7 @@ export const useEquipmentStore = defineStore("equipment", {
       const history = await fetch("/data/equipmentStateHistory.json").then(
         (res) => res.json()
       );
-      this.stateHistory = this.filteredData.stateHistory = Object.fromEntries(
+      this.stateHistory = Object.fromEntries(
         history.map((entry: EquipmentStateHistory) => [
           entry.equipmentId,
           entry.states,

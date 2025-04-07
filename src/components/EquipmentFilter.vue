@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useEquipmentStore } from '@/store/useEquipmentStore'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Search } from 'lucide-vue-next'
 
 const store = useEquipmentStore()
 const filters = store.filters
@@ -17,24 +19,7 @@ const latestDate = computed(() => {
 })
 
 // Atualiza o range de datas com base no período selecionado
-watch(
-  () => filters.period,
-  (period) => {
-    const end = new Date(latestDate.value)
-    const start = new Date(end)
 
-    if (period === '1d') start.setDate(end.getDate() - 1)
-    else if (period === '7d') start.setDate(end.getDate() - 7)
-    else if (period === '30d') start.setDate(end.getDate() - 30)
-    else start.setTime(0)
-
-    filters.dateRange.start = start
-    filters.dateRange.end = end
-
-    store.updateFilteredEquipments()
-  },
-  { immediate: true }
-)
 
 // Atualiza ao mudar status ou tipo
 watch(
@@ -43,6 +28,19 @@ watch(
     store.updateFilteredEquipments()
   }
 )
+
+const searchQuery = ref('')
+
+// Atualiza o filtro na store toda vez que o usuário digitar
+watch(searchQuery, (newValue) => {
+  store.filters.search = newValue
+  store.updateFilteredEquipments()
+})
+
+onMounted(() => {
+  store.updateFilteredEquipments()
+})
+
 </script>
 
 <template>
@@ -89,5 +87,14 @@ watch(
         <ToggleGroupItem value="custom">Todo</ToggleGroupItem>
       </ToggleGroup>
     </div>
+    <div class="w-60 relative ">
+      <Input id="search" v-model="searchQuery" type="text" placeholder="Pesquisar..." class="pl-10"
+       />
+      <span class="absolute start-0 inset-y-0 flex items-center justify-center px-2">
+        <Search class="size-6 text-muted-foreground" />
+      </span>
+    </div>
   </div>
+
+
 </template>
