@@ -3,8 +3,9 @@
 Este projeto é uma aplicação web desenvolvida com Vue 3 que permite **visualizar, filtrar e analisar dados de equipamentos em operação**. A interface exibe os equipamentos em um mapa interativo, além de oferecer **gráficos de produtividade**, **informações detalhadas de estado**, e **filtragem avançada** por período, tipo e status.
 
 ## Link do Vídeo apresentando o projeto
+Link do vídeo: [youtube](https://youtu.be/A6zUrnNvois)
 
-<iframe width="560" height="315" src="https://youtu.be/A6zUrnNvois" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<video src="https://youtu.be/A6zUrnNvois" width="320" height="240" controls></video>
 
 ---
 
